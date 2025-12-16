@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { UploadCloud, CheckCircle, AlertTriangle, Download, X, Loader2, Settings } from 'lucide-react';
+import { UploadCloud, CheckCircle, AlertTriangle, Download, X, Settings, Sparkles } from 'lucide-react';
 import { Card } from '@heroui/react';
 import { Button } from '@heroui/react';
 import { Select, ListBox } from '@heroui/react';
@@ -7,6 +7,9 @@ import { Label } from '@heroui/react';
 import { Slider } from '@heroui/react';
 import { Checkbox } from '@heroui/react';
 import { Spinner } from '@heroui/react';
+import { Alert } from '@heroui/react';
+import { Separator } from '@heroui/react';
+import { NumberField } from '@heroui/react';
 import { cn } from '@/lib/utils';
 import imageCompression from 'browser-image-compression';
 
@@ -313,9 +316,9 @@ const ImageConverter = () => {
       case 'pending':
         return { color: 'text-muted-foreground', icon: <UploadCloud className="w-5 h-5" /> };
       case 'converting':
-        return { color: 'text-blue-500', icon: <Loader2 className="w-5 h-5 animate-spin" /> };
+        return { color: 'text-primary', icon: <Spinner size="sm" color="current" /> };
       case 'success':
-        return { color: 'text-green-500', icon: <CheckCircle className="w-5 h-5" /> };
+        return { color: 'text-success', icon: <CheckCircle className="w-5 h-5" /> };
       case 'error':
         return { color: 'text-destructive', icon: <AlertTriangle className="w-5 h-5" /> };
       default:
@@ -326,201 +329,236 @@ const ImageConverter = () => {
   const totalFiles = files.length;
   const isButtonDisabled = totalFiles === 0 || isConverting;
 
+  const getAlertStatus = (type: string): "default" | "accent" | "success" | "warning" | "danger" => {
+    switch (type) {
+      case 'success': return 'success';
+      case 'error': return 'danger';
+      case 'warning': return 'warning';
+      case 'info': return 'accent';
+      default: return 'default';
+    }
+  };
+
   return (
-    <div className="w-full max-w-7xl mx-auto">
-      <div className="flex flex-col lg:flex-row gap-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Header Section */}
+      <div className="mb-8 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 mb-4">
+          <Sparkles className="w-8 h-8 text-primary" />
+        </div>
+        <h1 className="text-4xl sm:text-5xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+          Format Converter
+        </h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Convert images to PDF, PDF to images, and between image formats instantly. All processing happens locally in your browser.
+        </p>
+      </div>
+
+      <div className="flex flex-col xl:flex-row gap-6">
         {/* Main Content */}
-        <div className="flex-1">
-          <Card className="shadow-xl">
-            <Card.Header>
-              <Card.Title className="text-3xl font-extrabold text-center">Batch Format Converter</Card.Title>
-              <Card.Description className="text-center">
-                  Convert Images to PDF, PDF to Images, and between Image formats locally.
+        <div className="flex-1 min-w-0">
+          <Card className="shadow-lg border-0">
+            <Card.Header className="pb-4">
+              <Card.Title className="text-2xl font-bold">Convert Files</Card.Title>
+              <Card.Description>
+                Select your files and choose the output format
               </Card.Description>
             </Card.Header>
             <Card.Content className="space-y-6">
               
               {globalMessage.text && (
-                <div className={cn(
-                  "p-3 rounded-lg font-medium text-sm border",
-                  globalMessage.type === 'success' ? 'bg-green-100 text-green-700 border-green-200' :
-                  globalMessage.type === 'error' ? 'bg-red-100 text-red-700 border-red-200' :
-                  globalMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                  'bg-blue-100 text-blue-700 border-blue-200'
-                )}>
-                  {globalMessage.text}
-                </div>
+                <Alert status={getAlertStatus(globalMessage.type)}>
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Description>{globalMessage.text}</Alert.Description>
+                  </Alert.Content>
+                </Alert>
               )}
 
-              {/* Controls */}
-              <div className="flex flex-col md:flex-row gap-4">
-                  
-                  {/* Input Filter */}
-                   <div className="w-full md:w-48 space-y-2">
-                      <Select 
-                        value={inputFilter}
-                        onChange={(value) => setInputFilter(value as InputFilter)}
-                        placeholder="Select input"
-                      >
-                          <Label>Convert From</Label>
-                          <Select.Trigger>
-                              <Select.Value />
-                              <Select.Indicator />
-                          </Select.Trigger>
-                          <Select.Popover>
-                              <ListBox>
-                                  <ListBox.Item id="all" textValue="All Supported">
-                                      All Supported
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                  <ListBox.Item id="image" textValue="All Images">
-                                      All Images
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                  <ListBox.Item id="pdf" textValue="PDF Only">
-                                      PDF Only
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                  <ListBox.Item id="png" textValue="PNG Only">
-                                      PNG Only
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                  <ListBox.Item id="jpeg" textValue="JPEG Only">
-                                      JPEG Only
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                  <ListBox.Item id="webp" textValue="WebP Only">
-                                      WebP Only
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                              </ListBox>
-                          </Select.Popover>
-                      </Select>
-                  </div>
+              {/* Format Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Input Filter */}
+                <Select 
+                  value={inputFilter}
+                  onChange={(value) => setInputFilter(value as InputFilter)}
+                  placeholder="Select input format"
+                  className="w-full"
+                >
+                    <Label className="text-sm font-semibold mb-2">Convert From</Label>
+                    <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            <ListBox.Item id="all" textValue="All Supported">
+                                All Supported
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="image" textValue="All Images">
+                                All Images
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="pdf" textValue="PDF Only">
+                                PDF Only
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="png" textValue="PNG Only">
+                                PNG Only
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="jpeg" textValue="JPEG Only">
+                                JPEG Only
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="webp" textValue="WebP Only">
+                                WebP Only
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                        </ListBox>
+                    </Select.Popover>
+                </Select>
 
-                  {/* Output Format */}
-                  <div className="w-full md:w-48 space-y-2">
-                      <Select 
-                        value={outputFormat}
-                        onChange={(value) => setOutputFormat(value as FileFormat)}
-                        placeholder="Select output"
-                      >
-                          <Label>Convert To</Label>
-                          <Select.Trigger>
-                              <Select.Value />
-                              <Select.Indicator />
-                          </Select.Trigger>
-                          <Select.Popover>
-                              <ListBox>
-                                  <ListBox.Item id="webp" textValue="WebP Image">
-                                      WebP Image
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                  <ListBox.Item id="png" textValue="PNG Image">
-                                      PNG Image
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                  <ListBox.Item id="jpeg" textValue="JPEG Image">
-                                      JPEG Image
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                                  <ListBox.Item id="pdf" textValue="PDF Document">
-                                      PDF Document
-                                      <ListBox.ItemIndicator />
-                                  </ListBox.Item>
-                              </ListBox>
-                          </Select.Popover>
-                      </Select>
-                  </div>
+                {/* Output Format */}
+                <Select 
+                  value={outputFormat}
+                  onChange={(value) => setOutputFormat(value as FileFormat)}
+                  placeholder="Select output format"
+                  className="w-full"
+                >
+                    <Label className="text-sm font-semibold mb-2">Convert To</Label>
+                    <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                        <ListBox>
+                            <ListBox.Item id="webp" textValue="WebP Image">
+                                WebP Image
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="png" textValue="PNG Image">
+                                PNG Image
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="jpeg" textValue="JPEG Image">
+                                JPEG Image
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                            <ListBox.Item id="pdf" textValue="PDF Document">
+                                PDF Document
+                                <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                        </ListBox>
+                    </Select.Popover>
+                </Select>
               </div>
 
+              <Separator />
+
               {/* Upload Area */}
-              <Label htmlFor="file-upload" className="cursor-pointer block">
-                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-input rounded-lg hover:bg-accent/50 transition-colors">
-                      <UploadCloud className="w-10 h-10 text-primary mb-3" />
-                      <p className="text-lg font-semibold">Click to upload or drag & drop</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                          {inputFilter === 'pdf' ? 'PDF files only' : 
-                           inputFilter === 'image' ? 'Images (PNG, JPG, WebP)' : 
-                           'Images or PDF files'}
-                      </p>
-                  </div>
-                  <input
-                      id="file-upload"
-                      type="file"
-                      multiple
-                      accept={getAcceptedFileTypes(inputFilter)}
-                      onChange={handleFileChange}
-                      className="hidden"
-                  />
-              </Label>
+              <div className="space-y-2">
+                <Label htmlFor="file-upload" className="text-sm font-semibold">Upload Files</Label>
+                <Label htmlFor="file-upload" className="cursor-pointer block">
+                    <div className="group relative flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl transition-all duration-200 hover:border-primary/50 hover:bg-surface-secondary/50 bg-surface/30">
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="mb-4 p-4 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                                <UploadCloud className="w-8 h-8 text-primary" />
+                            </div>
+                            <p className="text-base font-semibold mb-1">Click to upload or drag & drop</p>
+                            <p className="text-sm text-muted-foreground text-center max-w-sm">
+                                {inputFilter === 'pdf' ? 'PDF files only' : 
+                                 inputFilter === 'image' ? 'Images (PNG, JPG, WebP)' : 
+                                 'Images or PDF files'}
+                            </p>
+                            {totalFiles > 0 && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    {totalFiles} file{totalFiles > 1 ? 's' : ''} ready
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <input
+                        id="file-upload"
+                        type="file"
+                        multiple
+                        accept={getAcceptedFileTypes(inputFilter)}
+                        onChange={handleFileChange}
+                        className="hidden"
+                    />
+                </Label>
+              </div>
 
               {/* File List */}
               {totalFiles > 0 && (
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="bg-muted/50 p-3 border-b flex justify-between items-center">
-                      <h3 className="font-semibold text-sm">Files Queue ({totalFiles})</h3>
-                      <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 text-destructive hover:text-destructive"
-                          onPress={() => { setFiles([]); setConversionStatus({}); }}
-                      >
-                          Clear All
-                      </Button>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-semibold">Files Queue</h3>
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-destructive hover:text-destructive"
+                        onPress={() => { setFiles([]); setConversionStatus({}); }}
+                    >
+                        Clear All
+                    </Button>
                   </div>
-                  <ul className="max-h-64 overflow-y-auto divide-y">
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
                     {files.map((file, idx) => {
                       const status = conversionStatus[file.name] || 'pending';
                       const { color, icon } = getStatusVisuals(status);
 
                       return (
-                        <li
-                          key={file.name + idx}
-                          className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
-                        >
-                          <div className="flex items-center space-x-3 overflow-hidden">
-                            <span className={color}>{icon}</span>
-                            <div className="flex flex-col min-w-0">
+                        <Card key={file.name + idx} variant="secondary" className="p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className={cn("flex-shrink-0", color)}>
+                                {icon}
+                              </div>
+                              <div className="flex flex-col min-w-0 flex-1">
                                 <span className="truncate text-sm font-medium">
                                   {file.name}
                                 </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                                </span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs text-muted-foreground">
+                                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">•</span>
+                                  <span className={cn("text-xs font-medium capitalize", color)}>
+                                    {status === 'converting' ? 'Converting...' : status}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
+                            <Button
+                                variant="ghost"
+                                isIconOnly
+                                size="sm"
+                                className="flex-shrink-0 text-muted-foreground hover:text-destructive"
+                                onPress={() => removeFile(file.name)}
+                                isDisabled={isConverting}
+                            >
+                                <X className="w-4 h-4" />
+                                <span className="sr-only">Remove file</span>
+                            </Button>
                           </div>
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                              <span className={cn("text-xs font-medium capitalize hidden sm:inline-block", color)}>
-                                  {status === 'converting' ? 'Converting...' : status}
-                              </span>
-                              <Button
-                                  variant="ghost"
-                                  isIconOnly
-                                  size="sm"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onPress={() => removeFile(file.name)}
-                                  isDisabled={isConverting}
-                              >
-                                  <X className="w-4 h-4" />
-                                  <span className="sr-only">Remove file</span>
-                              </Button>
-                          </div>
-                        </li>
+                        </Card>
                       );
                     })}
-                  </ul>
+                  </div>
                 </div>
               )}
 
             </Card.Content>
-            <Card.Footer className="flex justify-center pb-8">
+            <Card.Footer className="pt-6">
               <Button
                   onPress={startConversion}
                   isDisabled={isButtonDisabled}
                   size="lg"
                   isPending={isConverting}
-                  className="w-full sm:w-auto min-w-[200px]"
+                  className="w-full"
+                  variant="primary"
               >
                   {({ isPending }) => (
                     <>
@@ -531,8 +569,8 @@ const ImageConverter = () => {
                         </>
                       ) : (
                         <>
-                          <Download className="mr-2 h-4 w-4" />
-                          Convert & Download ({totalFiles})
+                          <Download className="w-5 h-5" />
+                          Convert & Download {totalFiles > 0 && `(${totalFiles})`}
                         </>
                       )}
                     </>
@@ -543,43 +581,75 @@ const ImageConverter = () => {
         </div>
 
         {/* Right Panel - Compression Settings */}
-        <div className="w-full lg:w-80 flex-shrink-0">
-          <Card className="shadow-xl">
+        <div className="w-full xl:w-80 flex-shrink-0">
+          <Card className="shadow-lg border-0 sticky top-6">
             <Card.Header>
-              <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                <Card.Title className="text-xl">Compression Settings</Card.Title>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Settings className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <Card.Title className="text-xl">Settings</Card.Title>
+                  <Card.Description className="text-xs">
+                    Compression options
+                  </Card.Description>
+                </div>
               </div>
-              <Card.Description>
-                Configure image compression options
-              </Card.Description>
             </Card.Header>
             <Card.Content className="space-y-6">
               {/* Enable Compression Toggle */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-surface-secondary/50">
                 <Checkbox
                   id="enable-compression"
                   isSelected={enableCompression}
                   onChange={setEnableCompression}
+                  className="mt-0.5"
                 >
                   <Checkbox.Control>
                     <Checkbox.Indicator />
                   </Checkbox.Control>
                 </Checkbox>
-                <Label
-                  htmlFor="enable-compression"
-                  className="text-sm font-medium leading-none cursor-pointer"
-                >
-                  Enable Compression
-                </Label>
+                <div className="flex-1">
+                  <Label
+                    htmlFor="enable-compression"
+                    className="text-sm font-semibold cursor-pointer block mb-1"
+                  >
+                    Enable Compression
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Reduce file size while maintaining quality
+                  </p>
+                </div>
               </div>
 
               {enableCompression && (
-                <>
+                <div className="space-y-5 pt-2">
+                  <Separator />
+                  
                   {/* Quality Slider */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="quality" className="text-sm font-semibold">Quality</Label>
+                      <Slider
+                        id="quality"
+                        minValue={0.1}
+                        maxValue={1}
+                        step={0.05}
+                        value={compressionQuality[0]}
+                        onChange={(value) => setCompressionQuality([typeof value === 'number' ? value : value[0]])}
+                        isDisabled={!enableCompression}
+                        className="w-full max-w-32"
+                      >
+                        <Slider.Output>
+                          {({ state }) => (
+                            <span className="text-sm font-medium text-primary min-w-[3rem] text-right">
+                              {Math.round(state.values[0] * 100)}%
+                            </span>
+                          )}
+                        </Slider.Output>
+                      </Slider>
+                    </div>
                     <Slider
-                      id="quality"
                       minValue={0.1}
                       maxValue={1}
                       step={0.05}
@@ -588,83 +658,85 @@ const ImageConverter = () => {
                       isDisabled={!enableCompression}
                       className="w-full"
                     >
-                      <div className="flex justify-between items-center">
-                        <Label htmlFor="quality">Quality</Label>
-                        <Slider.Output>
-                          {({ state }) => (
-                            <span className="text-sm text-muted-foreground">
-                              {Math.round(state.values[0] * 100)}%
-                            </span>
-                          )}
-                        </Slider.Output>
-                      </div>
                       <Slider.Track>
                         <Slider.Fill />
                         <Slider.Thumb />
                       </Slider.Track>
                     </Slider>
                     <p className="text-xs text-muted-foreground">
-                      Lower = smaller file size, lower quality
+                      Lower values = smaller file size, lower quality
                     </p>
                   </div>
 
                   {/* Max File Size */}
                   <div className="space-y-2">
-                    <Label htmlFor="max-size">Max File Size (MB)</Label>
-                    <input
+                    <NumberField
                       id="max-size"
-                      type="number"
-                      min={0.1}
-                      max={10}
+                      minValue={0.1}
+                      maxValue={10}
                       step={0.1}
                       value={maxSizeMB}
-                      onChange={(e) => setMaxSizeMB(parseFloat(e.target.value) || 1)}
-                      disabled={!enableCompression}
-                      className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50"
-                    />
+                      onChange={(value) => setMaxSizeMB(value || 1)}
+                      isDisabled={!enableCompression}
+                      className="w-full"
+                    >
+                      <Label htmlFor="max-size" className="text-sm font-semibold">Max File Size (MB)</Label>
+                      <NumberField.Group>
+                        <NumberField.DecrementButton />
+                        <NumberField.Input className="flex-1" />
+                        <NumberField.IncrementButton />
+                      </NumberField.Group>
+                    </NumberField>
                     <p className="text-xs text-muted-foreground">
                       Target maximum file size
                     </p>
                   </div>
 
-                  {/* Max Width */}
-                  <div className="space-y-2">
-                    <Label htmlFor="max-width">Max Width (px)</Label>
-                    <input
-                      id="max-width"
-                      type="number"
-                      min={100}
-                      max={5000}
-                      step={100}
-                      value={maxWidth}
-                      onChange={(e) => setMaxWidth(parseInt(e.target.value) || 1920)}
-                      disabled={!enableCompression}
-                      className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Maximum image width
-                    </p>
-                  </div>
+                  {/* Dimensions */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Max Width */}
+                    <div className="space-y-2">
+                      <NumberField
+                        id="max-width"
+                        minValue={100}
+                        maxValue={5000}
+                        step={100}
+                        value={maxWidth}
+                        onChange={(value) => setMaxWidth(value || 1920)}
+                        isDisabled={!enableCompression}
+                        className="w-full"
+                      >
+                        <Label htmlFor="max-width" className="text-sm font-semibold">Max Width</Label>
+                        <NumberField.Group>
+                          <NumberField.DecrementButton />
+                          <NumberField.Input className="flex-1" />
+                          <NumberField.IncrementButton />
+                        </NumberField.Group>
+                      </NumberField>
+                    </div>
 
-                  {/* Max Height */}
-                  <div className="space-y-2">
-                    <Label htmlFor="max-height">Max Height (px)</Label>
-                    <input
-                      id="max-height"
-                      type="number"
-                      min={100}
-                      max={5000}
-                      step={100}
-                      value={maxHeight}
-                      onChange={(e) => setMaxHeight(parseInt(e.target.value) || 1920)}
-                      disabled={!enableCompression}
-                      className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Maximum image height
-                    </p>
+                    {/* Max Height */}
+                    <div className="space-y-2">
+                      <NumberField
+                        id="max-height"
+                        minValue={100}
+                        maxValue={5000}
+                        step={100}
+                        value={maxHeight}
+                        onChange={(value) => setMaxHeight(value || 1920)}
+                        isDisabled={!enableCompression}
+                        className="w-full"
+                      >
+                        <Label htmlFor="max-height" className="text-sm font-semibold">Max Height</Label>
+                        <NumberField.Group>
+                          <NumberField.DecrementButton />
+                          <NumberField.Input className="flex-1" />
+                          <NumberField.IncrementButton />
+                        </NumberField.Group>
+                      </NumberField>
+                    </div>
                   </div>
-                </>
+                </div>
               )}
             </Card.Content>
           </Card>
