@@ -1,10 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { UploadCloud, CheckCircle, AlertTriangle, Download, X, Loader2 } from 'lucide-react';
+import { UploadCloud, CheckCircle, AlertTriangle, Download, X, Loader2, Settings } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import imageCompression from 'browser-image-compression';
 
 type ConversionStatus = 'pending' | 'converting' | 'success' | 'error';
 type GlobalMessage = { type: 'success' | 'error' | 'warning' | 'info' | ''; text: string };
@@ -19,6 +22,13 @@ const ImageConverter = () => {
   
   const [inputFilter, setInputFilter] = useState<InputFilter>('all');
   const [outputFormat, setOutputFormat] = useState<FileFormat>('webp');
+
+  // Compression settings
+  const [enableCompression, setEnableCompression] = useState(false);
+  const [compressionQuality, setCompressionQuality] = useState([0.8]);
+  const [maxSizeMB, setMaxSizeMB] = useState(1);
+  const [maxWidth, setMaxWidth] = useState(1920);
+  const [maxHeight, setMaxHeight] = useState(1920);
 
   const withRetry = async <T,>(fn: () => Promise<T>, maxRetries = 3, delay = 100): Promise<T> => {
     for (let i = 0; i < maxRetries; i++) {
@@ -44,6 +54,29 @@ const ImageConverter = () => {
     }
   };
 
+  // Compress image using browser-image-compression
+  const compressImage = async (file: File): Promise<File> => {
+    if (!enableCompression || !file.type.startsWith('image/')) {
+      return file;
+    }
+
+    const options = {
+      maxSizeMB: maxSizeMB,
+      maxWidthOrHeight: Math.max(maxWidth, maxHeight),
+      useWebWorker: true,
+      quality: compressionQuality[0],
+      fileType: file.type,
+    };
+
+    try {
+      const compressedFile = await imageCompression(file, options);
+      return compressedFile;
+    } catch (error) {
+      console.error('Compression failed, using original file:', error);
+      return file;
+    }
+  };
+
   // Convert Image -> Image (Canvas)
   const convertImageToImage = (file: File, format: FileFormat): Promise<Blob> => {
     return new Promise((resolve, reject) => {
@@ -62,7 +95,7 @@ const ImageConverter = () => {
             canvas.toBlob((blob) => {
               if (blob) resolve(blob);
               else reject(new Error("Conversion failed"));
-            }, `image/${format}`, 0.95);
+            }, `image/${format}`, compressionQuality[0]);
           } catch (err) { reject(err); }
         };
         img.onerror = () => reject(new Error("Failed to load image"));
@@ -138,7 +171,7 @@ const ImageConverter = () => {
         canvas.toBlob((blob) => {
           if (blob) resolve(blob);
           else reject(new Error(`PDF page ${pageNum} conversion failed`));
-        }, `image/${format}`, 0.95);
+        }, `image/${format}`, compressionQuality[0]);
       });
 
       imageBlobs.push(blob);
@@ -151,6 +184,12 @@ const ImageConverter = () => {
     const isInputPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     const isOutputPdf = targetFormat === 'pdf';
 
+    // Compress image first if enabled and it's an image
+    let fileToProcess = file;
+    if (!isInputPdf && enableCompression) {
+      fileToProcess = await compressImage(file);
+    }
+
     if (isInputPdf && isOutputPdf) {
         // PDF -> PDF: Return original (or could compress/process)
         return file; 
@@ -159,10 +198,10 @@ const ImageConverter = () => {
         return convertPdfToImage(file, targetFormat);
     } else if (!isInputPdf && isOutputPdf) {
         // Image -> PDF
-        return convertImageToPdf(file);
+        return convertImageToPdf(fileToProcess);
     } else {
         // Image -> Image
-        return convertImageToImage(file, targetFormat);
+        return convertImageToImage(fileToProcess, targetFormat);
     }
   };
 
@@ -287,165 +326,286 @@ const ImageConverter = () => {
   const isButtonDisabled = totalFiles === 0 || isConverting;
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-3xl font-extrabold text-center">Batch Format Converter</CardTitle>
-        <CardDescription className="text-center">
-            Convert Images to PDF, PDF to Images, and between Image formats locally.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        
-        {globalMessage.text && (
-          <div className={cn(
-            "p-3 rounded-lg font-medium text-sm border",
-            globalMessage.type === 'success' ? 'bg-green-100 text-green-700 border-green-200' :
-            globalMessage.type === 'error' ? 'bg-red-100 text-red-700 border-red-200' :
-            globalMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-            'bg-blue-100 text-blue-700 border-blue-200'
-          )}>
-            {globalMessage.text}
-          </div>
-        )}
+    <div className="w-full max-w-7xl mx-auto">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main Content */}
+        <div className="flex-1">
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-3xl font-extrabold text-center">Batch Format Converter</CardTitle>
+              <CardDescription className="text-center">
+                  Convert Images to PDF, PDF to Images, and between Image formats locally.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              
+              {globalMessage.text && (
+                <div className={cn(
+                  "p-3 rounded-lg font-medium text-sm border",
+                  globalMessage.type === 'success' ? 'bg-green-100 text-green-700 border-green-200' :
+                  globalMessage.type === 'error' ? 'bg-red-100 text-red-700 border-red-200' :
+                  globalMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                  'bg-blue-100 text-blue-700 border-blue-200'
+                )}>
+                  {globalMessage.text}
+                </div>
+              )}
 
-        {/* Controls */}
-        <div className="flex flex-col md:flex-row gap-4">
-            
-            {/* Input Filter */}
-             <div className="w-full md:w-48 space-y-2">
-                <Label>Convert From</Label>
-                <Select value={inputFilter} onValueChange={(v: InputFilter) => setInputFilter(v)}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select input" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Supported</SelectItem>
-                        <SelectItem value="image">All Images</SelectItem>
-                        <SelectItem value="pdf">PDF Only</SelectItem>
-                        <SelectItem value="png">PNG Only</SelectItem>
-                        <SelectItem value="jpeg">JPEG Only</SelectItem>
-                        <SelectItem value="webp">WebP Only</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+              {/* Controls */}
+              <div className="flex flex-col md:flex-row gap-4">
+                  
+                  {/* Input Filter */}
+                   <div className="w-full md:w-48 space-y-2">
+                      <Label>Convert From</Label>
+                      <Select value={inputFilter} onValueChange={(v: InputFilter) => setInputFilter(v)}>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Select input" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">All Supported</SelectItem>
+                              <SelectItem value="image">All Images</SelectItem>
+                              <SelectItem value="pdf">PDF Only</SelectItem>
+                              <SelectItem value="png">PNG Only</SelectItem>
+                              <SelectItem value="jpeg">JPEG Only</SelectItem>
+                              <SelectItem value="webp">WebP Only</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
 
-            {/* Output Format */}
-            <div className="w-full md:w-48 space-y-2">
-                <Label>Convert To</Label>
-                <Select value={outputFormat} onValueChange={(v: FileFormat) => setOutputFormat(v)}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select output" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="webp">WebP Image</SelectItem>
-                        <SelectItem value="png">PNG Image</SelectItem>
-                        <SelectItem value="jpeg">JPEG Image</SelectItem>
-                        <SelectItem value="pdf">PDF Document</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+                  {/* Output Format */}
+                  <div className="w-full md:w-48 space-y-2">
+                      <Label>Convert To</Label>
+                      <Select value={outputFormat} onValueChange={(v: FileFormat) => setOutputFormat(v)}>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Select output" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="webp">WebP Image</SelectItem>
+                              <SelectItem value="png">PNG Image</SelectItem>
+                              <SelectItem value="jpeg">JPEG Image</SelectItem>
+                              <SelectItem value="pdf">PDF Document</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
+              </div>
+
+              {/* Upload Area */}
+              <Label htmlFor="file-upload" className="cursor-pointer block">
+                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-input rounded-lg hover:bg-accent/50 transition-colors">
+                      <UploadCloud className="w-10 h-10 text-primary mb-3" />
+                      <p className="text-lg font-semibold">Click to upload or drag & drop</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                          {inputFilter === 'pdf' ? 'PDF files only' : 
+                           inputFilter === 'image' ? 'Images (PNG, JPG, WebP)' : 
+                           'Images or PDF files'}
+                      </p>
+                  </div>
+                  <input
+                      id="file-upload"
+                      type="file"
+                      multiple
+                      accept={getAcceptedFileTypes(inputFilter)}
+                      onChange={handleFileChange}
+                      className="hidden"
+                  />
+              </Label>
+
+              {/* File List */}
+              {totalFiles > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-muted/50 p-3 border-b flex justify-between items-center">
+                      <h3 className="font-semibold text-sm">Files Queue ({totalFiles})</h3>
+                      <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-destructive hover:text-destructive"
+                          onClick={() => { setFiles([]); setConversionStatus({}); }}
+                      >
+                          Clear All
+                      </Button>
+                  </div>
+                  <ul className="max-h-64 overflow-y-auto divide-y">
+                    {files.map((file, idx) => {
+                      const status = conversionStatus[file.name] || 'pending';
+                      const { color, icon } = getStatusVisuals(status);
+
+                      return (
+                        <li
+                          key={file.name + idx}
+                          className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3 overflow-hidden">
+                            <span className={color}>{icon}</span>
+                            <div className="flex flex-col min-w-0">
+                                <span className="truncate text-sm font-medium">
+                                  {file.name}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2 flex-shrink-0">
+                              <span className={cn("text-xs font-medium capitalize hidden sm:inline-block", color)}>
+                                  {status === 'converting' ? 'Converting...' : status}
+                              </span>
+                              <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeFile(file.name)}
+                                  disabled={isConverting}
+                              >
+                                  <X className="w-4 h-4" />
+                                  <span className="sr-only">Remove file</span>
+                              </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+            </CardContent>
+            <CardFooter className="flex justify-center pb-8">
+              <Button
+                  onClick={startConversion}
+                  disabled={isButtonDisabled}
+                  size="lg"
+                  className="w-full sm:w-auto min-w-[200px]"
+              >
+                  {isConverting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Convert & Download ({totalFiles})
+                    </>
+                  )}
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
 
-        {/* Upload Area */}
-        <Label htmlFor="file-upload" className="cursor-pointer block">
-            <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-input rounded-lg hover:bg-accent/50 transition-colors">
-                <UploadCloud className="w-10 h-10 text-primary mb-3" />
-                <p className="text-lg font-semibold">Click to upload or drag & drop</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                    {inputFilter === 'pdf' ? 'PDF files only' : 
-                     inputFilter === 'image' ? 'Images (PNG, JPG, WebP)' : 
-                     'Images or PDF files'}
-                </p>
-            </div>
-            <input
-                id="file-upload"
-                type="file"
-                multiple
-                accept={getAcceptedFileTypes(inputFilter)}
-                onChange={handleFileChange}
-                className="hidden"
-            />
-        </Label>
-
-        {/* File List */}
-        {totalFiles > 0 && (
-          <div className="border rounded-lg overflow-hidden">
-            <div className="bg-muted/50 p-3 border-b flex justify-between items-center">
-                <h3 className="font-semibold text-sm">Files Queue ({totalFiles})</h3>
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 text-destructive hover:text-destructive"
-                    onClick={() => { setFiles([]); setConversionStatus({}); }}
+        {/* Right Panel - Compression Settings */}
+        <div className="w-full lg:w-80 flex-shrink-0">
+          <Card className="shadow-xl">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                <CardTitle className="text-xl">Compression Settings</CardTitle>
+              </div>
+              <CardDescription>
+                Configure image compression options
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Enable Compression Toggle */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="enable-compression"
+                  checked={enableCompression}
+                  onCheckedChange={(checked) => setEnableCompression(checked === true)}
+                />
+                <Label
+                  htmlFor="enable-compression"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                 >
-                    Clear All
-                </Button>
-            </div>
-            <ul className="max-h-64 overflow-y-auto divide-y">
-              {files.map((file, idx) => {
-                const status = conversionStatus[file.name] || 'pending';
-                const { color, icon } = getStatusVisuals(status);
+                  Enable Compression
+                </Label>
+              </div>
 
-                return (
-                  <li
-                    key={file.name + idx}
-                    className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3 overflow-hidden">
-                      <span className={color}>{icon}</span>
-                      <div className="flex flex-col min-w-0">
-                          <span className="truncate text-sm font-medium">
-                            {file.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </span>
-                      </div>
+              {enableCompression && (
+                <>
+                  {/* Quality Slider */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="quality">Quality</Label>
+                      <span className="text-sm text-muted-foreground">
+                        {Math.round(compressionQuality[0] * 100)}%
+                      </span>
                     </div>
-                    <div className="flex items-center space-x-2 flex-shrink-0">
-                        <span className={cn("text-xs font-medium capitalize hidden sm:inline-block", color)}>
-                            {status === 'converting' ? 'Converting...' : status}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeFile(file.name)}
-                            disabled={isConverting}
-                        >
-                            <X className="w-4 h-4" />
-                            <span className="sr-only">Remove file</span>
-                        </Button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
+                    <Slider
+                      id="quality"
+                      min={0.1}
+                      max={1}
+                      step={0.05}
+                      value={compressionQuality}
+                      onValueChange={setCompressionQuality}
+                      disabled={!enableCompression}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Lower = smaller file size, lower quality
+                    </p>
+                  </div>
 
-      </CardContent>
-      <CardFooter className="flex justify-center pb-8">
-        <Button
-            onClick={startConversion}
-            disabled={isButtonDisabled}
-            size="lg"
-            className="w-full sm:w-auto min-w-[200px]"
-        >
-            {isConverting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Download className="mr-2 h-4 w-4" />
-                Convert & Download ({totalFiles})
-              </>
-            )}
-        </Button>
-      </CardFooter>
-    </Card>
+                  {/* Max File Size */}
+                  <div className="space-y-2">
+                    <Label htmlFor="max-size">Max File Size (MB)</Label>
+                    <input
+                      id="max-size"
+                      type="number"
+                      min={0.1}
+                      max={10}
+                      step={0.1}
+                      value={maxSizeMB}
+                      onChange={(e) => setMaxSizeMB(parseFloat(e.target.value) || 1)}
+                      disabled={!enableCompression}
+                      className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Target maximum file size
+                    </p>
+                  </div>
+
+                  {/* Max Width */}
+                  <div className="space-y-2">
+                    <Label htmlFor="max-width">Max Width (px)</Label>
+                    <input
+                      id="max-width"
+                      type="number"
+                      min={100}
+                      max={5000}
+                      step={100}
+                      value={maxWidth}
+                      onChange={(e) => setMaxWidth(parseInt(e.target.value) || 1920)}
+                      disabled={!enableCompression}
+                      className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Maximum image width
+                    </p>
+                  </div>
+
+                  {/* Max Height */}
+                  <div className="space-y-2">
+                    <Label htmlFor="max-height">Max Height (px)</Label>
+                    <input
+                      id="max-height"
+                      type="number"
+                      min={100}
+                      max={5000}
+                      step={100}
+                      value={maxHeight}
+                      onChange={(e) => setMaxHeight(parseInt(e.target.value) || 1920)}
+                      disabled={!enableCompression}
+                      className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background disabled:opacity-50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Maximum image height
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 };
 
