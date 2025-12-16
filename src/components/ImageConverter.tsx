@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { UploadCloud, CheckCircle, AlertTriangle, Download, X, Loader2, Settings } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Card } from '@heroui/react';
+import { Button } from '@heroui/react';
+import { Select, ListBox } from '@heroui/react';
+import { Label } from '@heroui/react';
+import { Slider } from '@heroui/react';
+import { Checkbox } from '@heroui/react';
+import { Spinner } from '@heroui/react';
 import { cn } from '@/lib/utils';
 import imageCompression from 'browser-image-compression';
 
@@ -331,13 +332,13 @@ const ImageConverter = () => {
         {/* Main Content */}
         <div className="flex-1">
           <Card className="shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-3xl font-extrabold text-center">Batch Format Converter</CardTitle>
-              <CardDescription className="text-center">
+            <Card.Header>
+              <Card.Title className="text-3xl font-extrabold text-center">Batch Format Converter</Card.Title>
+              <Card.Description className="text-center">
                   Convert Images to PDF, PDF to Images, and between Image formats locally.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+              </Card.Description>
+            </Card.Header>
+            <Card.Content className="space-y-6">
               
               {globalMessage.text && (
                 <div className={cn(
@@ -356,35 +357,79 @@ const ImageConverter = () => {
                   
                   {/* Input Filter */}
                    <div className="w-full md:w-48 space-y-2">
-                      <Label>Convert From</Label>
-                      <Select value={inputFilter} onValueChange={(v: InputFilter) => setInputFilter(v)}>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Select input" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="all">All Supported</SelectItem>
-                              <SelectItem value="image">All Images</SelectItem>
-                              <SelectItem value="pdf">PDF Only</SelectItem>
-                              <SelectItem value="png">PNG Only</SelectItem>
-                              <SelectItem value="jpeg">JPEG Only</SelectItem>
-                              <SelectItem value="webp">WebP Only</SelectItem>
-                          </SelectContent>
+                      <Select 
+                        value={inputFilter}
+                        onChange={(value) => setInputFilter(value as InputFilter)}
+                        placeholder="Select input"
+                      >
+                          <Label>Convert From</Label>
+                          <Select.Trigger>
+                              <Select.Value />
+                              <Select.Indicator />
+                          </Select.Trigger>
+                          <Select.Popover>
+                              <ListBox>
+                                  <ListBox.Item id="all" textValue="All Supported">
+                                      All Supported
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                  <ListBox.Item id="image" textValue="All Images">
+                                      All Images
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                  <ListBox.Item id="pdf" textValue="PDF Only">
+                                      PDF Only
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                  <ListBox.Item id="png" textValue="PNG Only">
+                                      PNG Only
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                  <ListBox.Item id="jpeg" textValue="JPEG Only">
+                                      JPEG Only
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                  <ListBox.Item id="webp" textValue="WebP Only">
+                                      WebP Only
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                              </ListBox>
+                          </Select.Popover>
                       </Select>
                   </div>
 
                   {/* Output Format */}
                   <div className="w-full md:w-48 space-y-2">
-                      <Label>Convert To</Label>
-                      <Select value={outputFormat} onValueChange={(v: FileFormat) => setOutputFormat(v)}>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Select output" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="webp">WebP Image</SelectItem>
-                              <SelectItem value="png">PNG Image</SelectItem>
-                              <SelectItem value="jpeg">JPEG Image</SelectItem>
-                              <SelectItem value="pdf">PDF Document</SelectItem>
-                          </SelectContent>
+                      <Select 
+                        value={outputFormat}
+                        onChange={(value) => setOutputFormat(value as FileFormat)}
+                        placeholder="Select output"
+                      >
+                          <Label>Convert To</Label>
+                          <Select.Trigger>
+                              <Select.Value />
+                              <Select.Indicator />
+                          </Select.Trigger>
+                          <Select.Popover>
+                              <ListBox>
+                                  <ListBox.Item id="webp" textValue="WebP Image">
+                                      WebP Image
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                  <ListBox.Item id="png" textValue="PNG Image">
+                                      PNG Image
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                  <ListBox.Item id="jpeg" textValue="JPEG Image">
+                                      JPEG Image
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                                  <ListBox.Item id="pdf" textValue="PDF Document">
+                                      PDF Document
+                                      <ListBox.ItemIndicator />
+                                  </ListBox.Item>
+                              </ListBox>
+                          </Select.Popover>
                       </Select>
                   </div>
               </div>
@@ -419,7 +464,7 @@ const ImageConverter = () => {
                           variant="ghost" 
                           size="sm" 
                           className="h-8 text-destructive hover:text-destructive"
-                          onClick={() => { setFiles([]); setConversionStatus({}); }}
+                          onPress={() => { setFiles([]); setConversionStatus({}); }}
                       >
                           Clear All
                       </Button>
@@ -451,10 +496,11 @@ const ImageConverter = () => {
                               </span>
                               <Button
                                   variant="ghost"
-                                  size="icon"
+                                  isIconOnly
+                                  size="sm"
                                   className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => removeFile(file.name)}
-                                  disabled={isConverting}
+                                  onPress={() => removeFile(file.name)}
+                                  isDisabled={isConverting}
                               >
                                   <X className="w-4 h-4" />
                                   <span className="sr-only">Remove file</span>
@@ -467,53 +513,62 @@ const ImageConverter = () => {
                 </div>
               )}
 
-            </CardContent>
-            <CardFooter className="flex justify-center pb-8">
+            </Card.Content>
+            <Card.Footer className="flex justify-center pb-8">
               <Button
-                  onClick={startConversion}
-                  disabled={isButtonDisabled}
+                  onPress={startConversion}
+                  isDisabled={isButtonDisabled}
                   size="lg"
+                  isPending={isConverting}
                   className="w-full sm:w-auto min-w-[200px]"
               >
-                  {isConverting ? (
+                  {({ isPending }) => (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Convert & Download ({totalFiles})
+                      {isPending ? (
+                        <>
+                          <Spinner size="sm" color="current" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          Convert & Download ({totalFiles})
+                        </>
+                      )}
                     </>
                   )}
               </Button>
-            </CardFooter>
+            </Card.Footer>
           </Card>
         </div>
 
         {/* Right Panel - Compression Settings */}
         <div className="w-full lg:w-80 flex-shrink-0">
           <Card className="shadow-xl">
-            <CardHeader>
+            <Card.Header>
               <div className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                <CardTitle className="text-xl">Compression Settings</CardTitle>
+                <Card.Title className="text-xl">Compression Settings</Card.Title>
               </div>
-              <CardDescription>
+              <Card.Description>
                 Configure image compression options
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+              </Card.Description>
+            </Card.Header>
+            <Card.Content className="space-y-6">
               {/* Enable Compression Toggle */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="enable-compression"
-                  checked={enableCompression}
-                  onCheckedChange={(checked) => setEnableCompression(checked === true)}
-                />
+                  isSelected={enableCompression}
+                  onChange={setEnableCompression}
+                >
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                </Checkbox>
                 <Label
                   htmlFor="enable-compression"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  className="text-sm font-medium leading-none cursor-pointer"
                 >
                   Enable Compression
                 </Label>
@@ -523,21 +578,31 @@ const ImageConverter = () => {
                 <>
                   {/* Quality Slider */}
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor="quality">Quality</Label>
-                      <span className="text-sm text-muted-foreground">
-                        {Math.round(compressionQuality[0] * 100)}%
-                      </span>
-                    </div>
                     <Slider
                       id="quality"
-                      min={0.1}
-                      max={1}
+                      minValue={0.1}
+                      maxValue={1}
                       step={0.05}
-                      value={compressionQuality}
-                      onValueChange={setCompressionQuality}
-                      disabled={!enableCompression}
-                    />
+                      value={compressionQuality[0]}
+                      onChange={(value) => setCompressionQuality([typeof value === 'number' ? value : value[0]])}
+                      isDisabled={!enableCompression}
+                      className="w-full"
+                    >
+                      <div className="flex justify-between items-center">
+                        <Label htmlFor="quality">Quality</Label>
+                        <Slider.Output>
+                          {({ state }) => (
+                            <span className="text-sm text-muted-foreground">
+                              {Math.round(state.values[0] * 100)}%
+                            </span>
+                          )}
+                        </Slider.Output>
+                      </div>
+                      <Slider.Track>
+                        <Slider.Fill />
+                        <Slider.Thumb />
+                      </Slider.Track>
+                    </Slider>
                     <p className="text-xs text-muted-foreground">
                       Lower = smaller file size, lower quality
                     </p>
@@ -601,7 +666,7 @@ const ImageConverter = () => {
                   </div>
                 </>
               )}
-            </CardContent>
+            </Card.Content>
           </Card>
         </div>
       </div>
