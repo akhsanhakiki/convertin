@@ -1,21 +1,116 @@
 ---
-import '../styles/global.css';
-import ImageConverter from '../components/ImageConverter';
+import "../styles/global.css";
+import ImageConverter from "../components/ImageConverter";
+import { ArrowLeftRight } from "lucide-react";
 
+const year = new Date().getFullYear();
 ---
 
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Image Converter</title>
-	</head>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Convert PNG, JPEG, WebP, and PDF locally in your browser. Optional compression. Nothing is uploaded."
+    />
+    <meta name="theme-color" content="#FAF9F6" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>convetin.dg — Format Converter</title>
+  </head>
+  <body>
+    <div class="page">
+      <div class="page__grid" aria-hidden="true"></div>
 
-	<body class="min-h-screen font-sans antialiased bg-gradient-to-br from-background via-background to-surface-secondary/30">
-		<div class="container mx-auto py-6 sm:py-8 lg:py-12">
-			<ImageConverter client:load />
-		</div>
-	</body>
+      <nav class="nav" aria-label="Primary">
+        <a class="nav__brand" href="/">
+          <span class="nav__mark" aria-hidden="true">
+            <ArrowLeftRight size={14} strokeWidth={2} />
+          </span>
+          <span class="nav__wordmark">convetin.dg</span>
+        </a>
+        <span class="nav__meta">
+          <span class="nav__dot blink" aria-hidden="true"></span>
+          LOCAL
+        </span>
+      </nav>
+
+      <main class="app">
+        <header class="app__hero">
+          <h1 class="display app__title" data-type-text="convetin.dg">
+            <span class="app__title-typed" aria-hidden="true"></span>
+            <span class="app__title-cursor blink" aria-hidden="true">_</span>
+            <span class="sr-only">convetin.dg</span>
+          </h1>
+          <p class="app__lede">
+            Convert PNG, JPEG, WebP, and PDF — locally in your browser. Optional compression. Nothing is uploaded.
+          </p>
+        </header>
+
+        <ImageConverter client:load />
+
+        <footer class="app__footer">
+          <span>© {year}</span>
+          <span>NO UPLOAD · NO TRACKING</span>
+        </footer>
+      </main>
+    </div>
+
+    <script>
+      const title = document.querySelector(".app__title");
+      const typed = title?.querySelector(".app__title-typed");
+      const cursor = title?.querySelector(".app__title-cursor");
+      const text = title?.getAttribute("data-type-text") ?? "convetin.dg";
+
+      const renderFull = () => {
+        if (!(typed instanceof HTMLElement)) return;
+        typed.innerHTML = "";
+        for (const char of text) {
+          if (char === ".") {
+            const accent = document.createElement("span");
+            accent.className = "display__accent";
+            accent.textContent = ".";
+            typed.appendChild(accent);
+          } else {
+            typed.appendChild(document.createTextNode(char));
+          }
+        }
+        cursor?.classList.add("app__title-cursor--done");
+      };
+
+      const prefersReduced =
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      if (!(typed instanceof HTMLElement) || prefersReduced) {
+        renderFull();
+      } else {
+        let i = 0;
+        const tick = () => {
+          if (i >= text.length) {
+            cursor?.classList.add("app__title-cursor--done");
+            return;
+          }
+          const char = text[i];
+          if (char === ".") {
+            const accent = document.createElement("span");
+            accent.className = "display__accent";
+            accent.textContent = ".";
+            typed.appendChild(accent);
+          } else {
+            typed.appendChild(document.createTextNode(char));
+          }
+          i += 1;
+          window.setTimeout(tick, 70);
+        };
+        tick();
+      }
+    </script>
+  </body>
 </html>
